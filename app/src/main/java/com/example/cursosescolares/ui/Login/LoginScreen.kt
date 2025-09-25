@@ -79,8 +79,9 @@ fun LoginScreen(nav: NavHostController) {
             // Botón: navega a tu pantalla inicial después de login (ajusta la ruta si quieres "top"/"all"/"mine")
             Button(
                 onClick = {
-                    nav.navigate("top") { // 👈 cambia a "all" o "mine" si prefieres
-                        popUpTo("login") { inclusive = true }
+                    nav.navigate("mycourses") {
+                        popUpTo("login") { inclusive = true }   // quita login del back stack
+                        launchSingleTop = true
                     }
                 },
                 enabled = formOk,
