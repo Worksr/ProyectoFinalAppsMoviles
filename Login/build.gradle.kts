@@ -35,6 +35,7 @@ android {
 dependencies {
 
     implementation(project(":Database"))
+    implementation(project(":Authentication"))
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     testImplementation(libs.junit)
