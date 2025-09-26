@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 
-    id("com.google.gms.google-services") version "4.4.3" apply false
+
 }
 
 android {
@@ -53,4 +53,3 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
 }
 
-apply(plugin = "com.google.gms.google-services")

@@ -12,22 +12,34 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun LoginScreen(nav: NavHostController) {
+    val auth = remember { FirebaseAuth.getInstance() }
+    val scope = rememberCoroutineScope()
+
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    // Reglas de validación
-    val hasAt = email.contains("@")
-    val emailPatternOk = email.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
-    val showEmailErrorAt = email.isNotEmpty() && !hasAt
-    val showEmailPatternError = email.isNotEmpty() && hasAt && !emailPatternOk
+    // Validaciones
+    val emailValid = email.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val passOk = pass.isNotBlank()           // cámbialo a length>=6 si quieres
+    val formOk = emailValid && passOk && !isLoading
 
-    // Reglas de contraseña (oculta SIEMPRE)
-    val passwordOk = password.isNotBlank() // o: password.length >= 6
-
-    val formOk = emailPatternOk && passwordOk
+// Si ya hay usuario logeado, salta login
+    LaunchedEffect(Unit) {
+        if (auth.currentUser != null) {
+            nav.navigate("mycourses") {
+                popUpTo("login") { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -40,20 +52,16 @@ fun LoginScreen(nav: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Iniciar sesión", style = MaterialTheme.typography.headlineSmall)
+            Text("Iniciar sesión", style = MaterialTheme.typography.headlineSmall)
 
-            // Campo email (obliga a incluir '@' y formato de correo)
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it.replace(" ", "") },
+                onValueChange = { email = it.trim().lowercase().replace(" ", "") },
                 label = { Text("Correo electrónico") },
                 singleLine = true,
-                isError = showEmailErrorAt || showEmailPatternError,
+                isError = email.isNotEmpty() && !emailValid,
                 supportingText = {
-                    when {
-                        showEmailErrorAt -> Text("El correo debe incluir @")
-                        showEmailPatternError -> Text("Formato de correo inválido")
-                    }
+                    if (email.isNotEmpty() && !emailValid) Text("Correo inválido (debe incluir @)")
                 },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -62,10 +70,9 @@ fun LoginScreen(nav: NavHostController) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Campo contraseña (siempre en puntos)
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = pass,
+                onValueChange = { pass = it },
                 label = { Text("Contraseña") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -76,12 +83,40 @@ fun LoginScreen(nav: NavHostController) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Botón: navega a tu pantalla inicial después de login (ajusta la ruta si quieres "top"/"all"/"mine")
+            if (errorMsg != null) {
+                Text(errorMsg!!, color = MaterialTheme.colorScheme.error)
+            }
+
             Button(
                 onClick = {
-                    nav.navigate("mycourses") {
-                        popUpTo("login") { inclusive = true }   // quita login del back stack
-                        launchSingleTop = true
+                    errorMsg = null
+                    isLoading = true
+                    scope.launch {
+                        try {
+                            auth.signInWithEmailAndPassword(
+                                email.trim().lowercase(),
+                                pass
+                            ).await()
+
+                            nav.navigate("mycourses") {
+                                popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        } catch (e: Exception) {
+                            val msg = e.message ?: "Error al iniciar sesión"
+                            errorMsg = when {
+                                msg.contains("There is no user record", true) ->
+                                    "No existe una cuenta con ese correo."
+                                msg.contains("The password is invalid", true) ||
+                                        msg.contains("INVALID_LOGIN_CREDENTIALS", true) ->
+                                    "Contraseña incorrecta."
+                                msg.contains("blocked all requests", true) ->
+                                    "Demasiados intentos. Intenta más tarde."
+                                else -> "No se pudo iniciar sesión: $msg"
+                            }
+                        } finally {
+                            isLoading = false
+                        }
                     }
                 },
                 enabled = formOk,
@@ -89,7 +124,11 @@ fun LoginScreen(nav: NavHostController) {
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Text("Entrar")
+                Text(if (isLoading) "Entrando..." else "Entrar")
+            }
+
+            TextButton(onClick = { nav.navigate("register") }) {
+                Text("¿No tienes cuenta? Crea una")
             }
         }
     }

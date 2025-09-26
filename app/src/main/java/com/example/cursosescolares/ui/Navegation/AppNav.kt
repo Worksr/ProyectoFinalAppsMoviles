@@ -9,6 +9,7 @@ import com.example.cursosescolares.ui.Login.LoginScreen
 import com.example.cursosescolares.ui.Screens.MyCoursesScreen
 import com.example.cursosescolares.ui.Screens.SettingsScreen
 import com.example.cursosescolares.ViewModel.CourseViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun AppNav(nav: NavHostController, viewModel: CourseViewModel) {
@@ -21,6 +22,11 @@ fun AppNav(nav: NavHostController, viewModel: CourseViewModel) {
 
         composable("login") {
             LoginScreen(nav = nav)      // dentro de LoginScreen haz el navigate("mycourses") como en el paso 1
+        }
+
+        // ✅ Nueva ruta para Registro
+        composable("register") {
+            com.example.cursosescolares.ui.Login.RegisterScreen(nav = nav)
         }
 
         composable("mycourses") {
