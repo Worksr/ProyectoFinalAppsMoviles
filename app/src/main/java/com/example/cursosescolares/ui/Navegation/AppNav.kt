@@ -53,5 +53,7 @@ fun AppNav(dao: CourseDao? = null) {
         ) {
             // TODO: tu pantalla de detalle, por ahora podemos no implementarla para compilar
         }
+
+
     }
 }
